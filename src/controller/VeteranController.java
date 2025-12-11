@@ -1,31 +1,28 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller;
 
-/**
- *
- * @author princeysunar
- */
-public class VeteranController {
-  public class VeteranController {
-    private final List<Veteran> veterans;           // ArrayList
-    private final Deque<Veteran> recentQueue;       // Queue (ArrayDeque)
-    private final Deque<Runnable> undoStack;        // Stack (ArrayDeque as stack)
+import model.DataStore;
+import model.ValidationResult;
+import model.Veteran;
 
-    public boolean addVeteran(Veteran v, List<String> errors) {
-        if (!ValidationUtil.validateVeteran(v, errors)) return false;
-        if (isDuplicateServiceNumber(v.getServiceNumber())) {
-            errors.add("Service number must be unique.");
-            return false;
-        }
-        veterans.add(v);
-        recentQueue.addFirst(v);
-        trimQueueTo5();
-        undoStack.push(() -> veterans.remove(v));
+public class VeteranController {
+    private final DataStore store;
+
+    public VeteranController(DataStore store) {
+        this.store = store;
+    }
+
+    public ValidationResult addVeteran(Veteran v) {
+        ValidationResult vr = ValidationUtil.validateVeteran(v, java.time.Year.now().getValue());
+        if (!vr.isValid()) return vr;
+        v.setPost1997(v.getRetirementYear() >= 1997);
+        store.registerVeteran(v, vr);
+        return vr;
+    }
+
+    public boolean undoLast() {
+        Runnable r = store.getUndoStack().poll();
+        if (r == null) return false;
+        r.run();
         return true;
     }
-    // edit, delete with undo pushes...
-}  
 }
