@@ -4,11 +4,13 @@ import model.DataStore;
 import model.UserAccount;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
 public class UserAccountsPanel extends JPanel {
     private DataStore store;
     private DefaultTableModel tableModel;
+    private JTable table;
 
     public UserAccountsPanel(DataStore store) {
         this.store = store;
@@ -16,17 +18,18 @@ public class UserAccountsPanel extends JPanel {
 
         // Table
         tableModel = new DefaultTableModel(new Object[]{"Username","Password","Service Number"},0);
-        JTable table = new JTable(tableModel);
+        table = new JTable(tableModel);
         refreshTable();
 
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // Form
-        JPanel formPanel = new JPanel(new GridLayout(4,2,8,8));
+        JPanel formPanel = new JPanel(new GridLayout(5,2,8,8));
         JTextField usernameField = new JTextField();
         JTextField passwordField = new JTextField();
         JTextField serviceNumberField = new JTextField();
         JButton addButton = new JButton("Add Account");
+        JButton deleteButton = new JButton("Delete Selected");
 
         formPanel.add(new JLabel("Username:"));
         formPanel.add(usernameField);
@@ -34,11 +37,12 @@ public class UserAccountsPanel extends JPanel {
         formPanel.add(passwordField);
         formPanel.add(new JLabel("Service Number:"));
         formPanel.add(serviceNumberField);
-        formPanel.add(new JLabel()); // spacer
         formPanel.add(addButton);
+        formPanel.add(deleteButton);
 
         add(formPanel, BorderLayout.SOUTH);
 
+        // Add button logic
         addButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();
@@ -53,6 +57,24 @@ public class UserAccountsPanel extends JPanel {
             store.getUsers().add(account);
             JOptionPane.showMessageDialog(this, "Account added successfully!");
             refreshTable();
+
+            // Clear fields
+            usernameField.setText("");
+            passwordField.setText("");
+            serviceNumberField.setText("");
+        });
+
+        // Delete button logic
+        deleteButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow >= 0) {
+                String username = (String) tableModel.getValueAt(selectedRow, 0);
+                store.getUsers().removeIf(u -> u.getUsername().equals(username));
+                JOptionPane.showMessageDialog(this, "Account deleted successfully!");
+                refreshTable();
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select an account to delete.");
+            }
         });
     }
 
