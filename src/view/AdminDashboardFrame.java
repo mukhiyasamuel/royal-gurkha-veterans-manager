@@ -29,9 +29,8 @@ public class AdminDashboardFrame extends JFrame {
         tabs.addTab("Eligibility", new EligibilityPanel());
 
         // Welfare Centers tab (placeholder for now)
-        tabs.addTab("Welfare Centers", new JPanel(new BorderLayout()) {{
-            add(new JLabel("Welfare Centers management coming soon..."), BorderLayout.CENTER);
-        }});
+        tabs.addTab("Welfare Centers", new WelfareCentersPanel(store));
+
 
         // Honors tab (placeholder for now)
         tabs.addTab("Honors", new JPanel(new BorderLayout()) {{
