@@ -37,9 +37,8 @@ public class AdminDashboardFrame extends JFrame {
 
 
         // Audit Logs tab (placeholder for now)
-        tabs.addTab("Audit Logs", new JPanel(new BorderLayout()) {{
-            add(new JLabel("Audit logs coming soon..."), BorderLayout.CENTER);
-        }});
+        tabs.addTab("Audit Logs", new AuditTrailPanel(store));
+
 
         add(tabs, BorderLayout.CENTER);
     }
