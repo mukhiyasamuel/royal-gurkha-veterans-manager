@@ -1,13 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller;
 
-/**
- *
- * @author princeysunar
- */
+import model.Veteran;
+import java.util.List;
+
 public class SortController {
     public void bubbleSortByRetirementYear(List<Veteran> veterans, boolean ascending) {
         int n = veterans.size();
@@ -23,5 +18,24 @@ public class SortController {
                 }
             }
         }
+    }
+
+    public void insertionSortByName(List<Veteran> veterans, boolean ascending) {
+        for (int i = 1; i < veterans.size(); i++) {
+            Veteran key = veterans.get(i);
+            int j = i - 1;
+            while (j >= 0 && compareNames(veterans.get(j), key, ascending) > 0) {
+                veterans.set(j + 1, veterans.get(j));
+                j--;
+            }
+            veterans.set(j + 1, key);
+        }
+    }
+
+    private int compareNames(Veteran a, Veteran b, boolean ascending) {
+        String na = a.getFullName() == null ? "" : a.getFullName();
+        String nb = b.getFullName() == null ? "" : b.getFullName();
+        int cmp = na.compareToIgnoreCase(nb);
+        return ascending ? cmp : -cmp;
     }
 }
