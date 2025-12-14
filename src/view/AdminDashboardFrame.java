@@ -33,9 +33,8 @@ public class AdminDashboardFrame extends JFrame {
 
 
         // Honors tab (placeholder for now)
-        tabs.addTab("Honors", new JPanel(new BorderLayout()) {{
-            add(new JLabel("Honors list coming soon..."), BorderLayout.CENTER);
-        }});
+       tabs.addTab("Honors", new HonorsPanel(store));
+
 
         // Audit Logs tab (placeholder for now)
         tabs.addTab("Audit Logs", new JPanel(new BorderLayout()) {{
