@@ -52,6 +52,33 @@ public class VeteranListPanel extends JPanel {
         undoButton.addActionListener(e -> {
             if (controller.undoLast()) refreshTable();
         });
+        
+        // Inside VeteranListPanel constructor, after undoButton:
+JButton searchButton = new JButton("Search by Name");
+JButton sortButton = new JButton("Sort by Retirement Year");
+
+buttons.add(searchButton);
+buttons.add(sortButton);
+
+SearchController searchController = new SearchController();
+SortController sortController = new SortController();
+
+searchButton.addActionListener(e -> {
+    String query = JOptionPane.showInputDialog(parent, "Enter name to search:");
+    if (query != null && !query.trim().isEmpty()) {
+        var results = searchController.linearSearchByName(store.getVeterans(), query);
+        tableModel.setRowCount(0);
+        for (Veteran v : results) {
+            tableModel.addRow(new Object[]{v.getFullName(), v.getServiceNumber(), v.getRank(), v.getRetirementYear()});
+        }
+    }
+});
+
+sortButton.addActionListener(e -> {
+    sortController.bubbleSortByRetirementYear(store.getVeterans(), true);
+    refreshTable();
+});
+
     }
 
     private void refreshTable() {
