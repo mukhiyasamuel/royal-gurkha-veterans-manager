@@ -3,6 +3,8 @@ package view;
 import controller.VeteranController;
 import model.DataStore;
 import model.Veteran;
+import controller.SearchController;
+import controller.SortController;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -20,7 +22,7 @@ public class VeteranListPanel extends JPanel {
 
         setLayout(new BorderLayout());
 
-        tableModel = new DefaultTableModel(new Object[]{"Name","Service No","Rank","Retirement Year"},0);
+        tableModel = new DefaultTableModel(new Object[]{"ID","Name","Service No","Rank","Retirement Year"},0);
         table = new JTable(tableModel);
         refreshTable();
 
@@ -57,8 +59,41 @@ public class VeteranListPanel extends JPanel {
 JButton searchButton = new JButton("Search by Name");
 JButton sortButton = new JButton("Sort by Retirement Year");
 
+JButton editButton = new JButton("Edit Selected");
+editButton.addActionListener(e -> {
+    int selectedRow = table.getSelectedRow();
+    if (selectedRow >= 0) {
+        Veteran v = store.getVeterans().get(selectedRow);
+
+        JTextField contactField = new JTextField(v.getContact());
+        JTextField nextOfKinField = new JTextField(v.getNextOfKin());
+
+        JPanel editPanel = new JPanel(new GridLayout(2,2,8,8));
+        editPanel.add(new JLabel("Contact:"));
+        editPanel.add(contactField);
+        editPanel.add(new JLabel("Next of Kin:"));
+        editPanel.add(nextOfKinField);
+
+        int result = JOptionPane.showConfirmDialog(this, editPanel, 
+            "Edit Veteran Profile", JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION) {
+            v.setContact(contactField.getText().trim());
+            v.setNextOfKin(nextOfKinField.getText().trim());
+            JOptionPane.showMessageDialog(this, "Veteran updated successfully!");
+            refreshTable();
+        }
+    } else {
+        JOptionPane.showMessageDialog(this, "Please select a veteran to edit.");
+    }
+});
+buttonPanel.add(editButton);
+
+
 buttons.add(searchButton);
 buttons.add(sortButton);
+
+
 
 SearchController searchController = new SearchController();
 SortController sortController = new SortController();
@@ -80,12 +115,19 @@ sortButton.addActionListener(e -> {
 });
 
     }
-
+    
     private void refreshTable() {
-        tableModel.setRowCount(0);
-        for (Veteran v : store.getVeterans()) {
-            tableModel.addRow(new Object[]{v.getFullName(), v.getServiceNumber(), v.getRank(), v.getRetirementYear()});
-        }
+    tableModel.setRowCount(0);
+    for (Veteran v : store.getVeterans()) {
+        tableModel.addRow(new Object[]{
+            v.getId(),
+            v.getFullName(),
+            v.getServiceNumber(),
+            v.getRank(),
+            v.getRetirementYear()
+        });
     }
+}
+
 }
 
