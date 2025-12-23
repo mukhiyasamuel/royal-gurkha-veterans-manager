@@ -7,6 +7,8 @@ import model.Veteran;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class VeteranListPanel extends JPanel {
     private DataStore store;
@@ -19,16 +21,27 @@ public class VeteranListPanel extends JPanel {
         this.veteranController = veteranController;
         setLayout(new BorderLayout());
 
+        // Search bar
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Search");
+        JButton resetButton = new JButton("Reset");
+        searchPanel.add(new JLabel("Search:"));
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+        searchPanel.add(resetButton);
+
+        add(searchPanel, BorderLayout.NORTH);
+
         // Table
-        tableModel = new DefaultTableModel(new Object[]{"Name","Service Number","Rank","Contact","Next of Kin"},0);
+        tableModel = new DefaultTableModel(new Object[]{"Name","Service Number","Rank","District","Contact","Next of Kin"},0);
         table = new JTable(tableModel);
-        refreshTable();
+        refreshTable(store.getVeterans());
 
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // --- Button panel ---
+        // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout());
-
         JButton addButton = new JButton("Add Veteran");
         JButton deleteButton = new JButton("Delete Selected");
         JButton editButton = new JButton("Edit Selected");
@@ -38,6 +51,25 @@ public class VeteranListPanel extends JPanel {
         buttonPanel.add(editButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
+
+        // Search logic
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText().trim().toLowerCase();
+            if (!keyword.isEmpty()) {
+                List<Veteran> filtered = store.getVeterans().stream()
+                        .filter(v -> v.getFullName().toLowerCase().contains(keyword)
+                                || v.getServiceNumber().toLowerCase().contains(keyword)
+                                || v.getRank().toLowerCase().contains(keyword)
+                                || v.getDistrict().toLowerCase().contains(keyword))
+                        .collect(Collectors.toList());
+                refreshTable(filtered);
+            }
+        });
+
+        resetButton.addActionListener(e -> {
+            searchField.setText("");
+            refreshTable(store.getVeterans());
+        });
 
         // Add button logic (simplified)
         addButton.addActionListener(e -> {
@@ -50,7 +82,7 @@ public class VeteranListPanel extends JPanel {
             if (selectedRow >= 0) {
                 store.getVeterans().remove(selectedRow);
                 JOptionPane.showMessageDialog(this, "Veteran deleted successfully!");
-                refreshTable();
+                refreshTable(store.getVeterans());
             } else {
                 JOptionPane.showMessageDialog(this, "Please select a veteran to delete.");
             }
@@ -78,7 +110,7 @@ public class VeteranListPanel extends JPanel {
                     v.setContact(contactField.getText().trim());
                     v.setNextOfKin(nextOfKinField.getText().trim());
                     JOptionPane.showMessageDialog(this, "Veteran updated successfully!");
-                    refreshTable();
+                    refreshTable(store.getVeterans());
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "Please select a veteran to edit.");
@@ -86,13 +118,14 @@ public class VeteranListPanel extends JPanel {
         });
     }
 
-    private void refreshTable() {
+    private void refreshTable(List<Veteran> veterans) {
         tableModel.setRowCount(0);
-        for (Veteran v : store.getVeterans()) {
+        for (Veteran v : veterans) {
             tableModel.addRow(new Object[]{
                     v.getFullName(),
                     v.getServiceNumber(),
                     v.getRank(),
+                    v.getDistrict(),
                     v.getContact(),
                     v.getNextOfKin()
             });
