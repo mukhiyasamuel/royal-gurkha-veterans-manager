@@ -24,12 +24,13 @@ public class UserAccountsPanel extends JPanel {
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // Form
-        JPanel formPanel = new JPanel(new GridLayout(5,2,8,8));
+        JPanel formPanel = new JPanel(new GridLayout(6,2,8,8));
         JTextField usernameField = new JTextField();
         JTextField passwordField = new JTextField();
         JTextField serviceNumberField = new JTextField();
         JButton addButton = new JButton("Add Account");
         JButton deleteButton = new JButton("Delete Selected");
+        JButton editButton = new JButton("Edit Selected");
 
         formPanel.add(new JLabel("Username:"));
         formPanel.add(usernameField);
@@ -39,6 +40,7 @@ public class UserAccountsPanel extends JPanel {
         formPanel.add(serviceNumberField);
         formPanel.add(addButton);
         formPanel.add(deleteButton);
+        formPanel.add(editButton);
 
         add(formPanel, BorderLayout.SOUTH);
 
@@ -53,12 +55,19 @@ public class UserAccountsPanel extends JPanel {
                 return;
             }
 
+            // Prevent duplicate usernames
+            boolean exists = store.getUsers().stream()
+                .anyMatch(u -> u.getUsername().equalsIgnoreCase(username));
+            if (exists) {
+                JOptionPane.showMessageDialog(this, "Username already exists.");
+                return;
+            }
+
             UserAccount account = new UserAccount(username, password, serviceNumber);
             store.getUsers().add(account);
             JOptionPane.showMessageDialog(this, "Account added successfully!");
             refreshTable();
 
-            // Clear fields
             usernameField.setText("");
             passwordField.setText("");
             serviceNumberField.setText("");
@@ -74,6 +83,35 @@ public class UserAccountsPanel extends JPanel {
                 refreshTable();
             } else {
                 JOptionPane.showMessageDialog(this, "Please select an account to delete.");
+            }
+        });
+
+        // Edit button logic
+        editButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow >= 0) {
+                UserAccount account = store.getUsers().get(selectedRow);
+
+                JTextField passwordEdit = new JTextField(account.getPassword());
+                JTextField serviceNumberEdit = new JTextField(account.getVeteranServiceNumber());
+
+                JPanel editPanel = new JPanel(new GridLayout(2,2,8,8));
+                editPanel.add(new JLabel("Password:"));
+                editPanel.add(passwordEdit);
+                editPanel.add(new JLabel("Service Number:"));
+                editPanel.add(serviceNumberEdit);
+
+                int result = JOptionPane.showConfirmDialog(this, editPanel,
+                        "Edit User Account", JOptionPane.OK_CANCEL_OPTION);
+
+                if (result == JOptionPane.OK_OPTION) {
+                    account.setPassword(passwordEdit.getText().trim());
+                    account.setVeteranServiceNumber(serviceNumberEdit.getText().trim());
+                    JOptionPane.showMessageDialog(this, "Account updated successfully!");
+                    refreshTable();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select an account to edit.");
             }
         });
     }
