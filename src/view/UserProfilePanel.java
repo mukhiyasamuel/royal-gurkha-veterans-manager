@@ -1,36 +1,58 @@
 package view;
 
-import model.Veteran;
+import model.UserAccount;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class UserProfilePanel extends JPanel {
-    private Veteran veteran;
-    private JTextField contactField;
-    private JTextField nextOfKinField;
+    private UserAccount account;
 
-    public UserProfilePanel(Veteran veteran) {
-        this.veteran = veteran;
-        setLayout(new GridLayout(3,2,8,8));
+    public UserProfilePanel(UserAccount account) {
+        this.account = account;
+        setLayout(new BorderLayout());
 
-        add(new JLabel("Contact:"));
-        contactField = new JTextField(veteran.getContact());
-        add(contactField);
+        // Form
+        JPanel formPanel = new JPanel(new GridLayout(4,2,8,8));
+        JTextField usernameField = new JTextField(account.getUsername());
+        usernameField.setEditable(false); // username should not be changed
+        JPasswordField passwordField = new JPasswordField(account.getPassword());
+        JTextField serviceNumberField = new JTextField(account.getVeteranServiceNumber());
 
-        add(new JLabel("Next of Kin:"));
-        nextOfKinField = new JTextField(veteran.getNextOfKin());
-        add(nextOfKinField);
+        JButton updateButton = new JButton("Update Profile");
+        JButton changePasswordButton = new JButton("Change Password");
 
-        JButton updateButton = new JButton("Update");
-        add(new JLabel()); // spacer
-        add(updateButton);
+        formPanel.add(new JLabel("Username:"));
+        formPanel.add(usernameField);
+        formPanel.add(new JLabel("Password:"));
+        formPanel.add(passwordField);
+        formPanel.add(new JLabel("Service Number:"));
+        formPanel.add(serviceNumberField);
+        formPanel.add(updateButton);
+        formPanel.add(changePasswordButton);
 
+        add(formPanel, BorderLayout.CENTER);
+
+        // Update profile logic
         updateButton.addActionListener(e -> {
-            veteran.setContact(contactField.getText().trim());
-            veteran.setNextOfKin(nextOfKinField.getText().trim());
+            String newServiceNumber = serviceNumberField.getText().trim();
+            if (newServiceNumber.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Service number cannot be empty.");
+                return;
+            }
+            account.setVeteranServiceNumber(newServiceNumber);
             JOptionPane.showMessageDialog(this, "Profile updated successfully!");
+        });
+
+        // Change password logic
+        changePasswordButton.addActionListener(e -> {
+            String newPassword = JOptionPane.showInputDialog(this, "Enter new password:");
+            if (newPassword != null && !newPassword.trim().isEmpty()) {
+                account.setPassword(newPassword.trim());
+                JOptionPane.showMessageDialog(this, "Password updated successfully!");
+            } else {
+                JOptionPane.showMessageDialog(this, "Password cannot be empty.");
+            }
         });
     }
 }
-
