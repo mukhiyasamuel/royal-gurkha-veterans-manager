@@ -3,33 +3,57 @@ package view;
 import model.DataStore;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class AuditTrailPanel extends JPanel {
     private DataStore store;
-    private DefaultListModel<String> listModel;
-    private JList<String> logList;
-    private JButton refreshButton;
+    private DefaultTableModel tableModel;
+    private JTable table;
 
     public AuditTrailPanel(DataStore store) {
         this.store = store;
         setLayout(new BorderLayout());
 
-        listModel = new DefaultListModel<>();
-        logList = new JList<>(listModel);
-        refreshButton = new JButton("Refresh Logs");
+        // Table
+        tableModel = new DefaultTableModel(new Object[]{"Audit Log Entries"},0);
+        table = new JTable(tableModel);
+        refreshTable();
 
-        add(new JScrollPane(logList), BorderLayout.CENTER);
-        add(refreshButton, BorderLayout.SOUTH);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
-        refreshButton.addActionListener(e -> refreshLogs());
-        refreshLogs();
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton exportButton = new JButton("Export Logs");
+
+        buttonPanel.add(exportButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        // Export logic
+        exportButton.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Save Audit Logs");
+            int userSelection = fileChooser.showSaveDialog(this);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                try (FileWriter writer = new FileWriter(fileChooser.getSelectedFile())) {
+                    for (String log : store.getAuditLogs()) {
+                        writer.write(log + System.lineSeparator());
+                    }
+                    JOptionPane.showMessageDialog(this, "Audit logs exported successfully!");
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(this, "Error exporting logs: " + ex.getMessage());
+                }
+            }
+        });
     }
 
-    private void refreshLogs() {
-        listModel.clear();
-        for (String entry : store.getAuditLog()) {
-            listModel.addElement(entry);
+    private void refreshTable() {
+        tableModel.setRowCount(0);
+        for (String log : store.getAuditLogs()) {
+            tableModel.addRow(new Object[]{log});
         }
     }
 }
