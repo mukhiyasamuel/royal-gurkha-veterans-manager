@@ -1,14 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package view;
 
-/**
- *
- * @author princeysunar
- */
-// view/LoginFrame.java
 import javax.swing.*;
 import java.awt.*;
 
@@ -38,8 +29,9 @@ public class LoginFrame extends JFrame {
         add(form, BorderLayout.CENTER);
         add(loginButton, BorderLayout.SOUTH);
         add(messageLabel, BorderLayout.NORTH);
+    }
 
-        // TODO: wire AuthController and route to Home/Admin
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
     }
 }
-

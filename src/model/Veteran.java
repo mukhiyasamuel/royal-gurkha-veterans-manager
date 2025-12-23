@@ -34,7 +34,9 @@ public class Veteran {
     public void setEnlistYear(int enlistYear) { this.enlistYear = enlistYear; }
     public int getRetirementYear() { return retirementYear; }
     public void setRetirementYear(int retirementYear) { this.retirementYear = retirementYear; }
-    public boolean isPost1997() { return post1997; }
+    public boolean isPost1997() {
+    return retirementYear >= 1997;
+}
     public void setPost1997(boolean post1997) { this.post1997 = post1997; }
     public PensionStatus getPensionStatus() { return pensionStatus; }
     public void setPensionStatus(PensionStatus pensionStatus) { this.pensionStatus = pensionStatus; }

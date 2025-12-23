@@ -4,9 +4,12 @@ import controller.EligibilityController;
 import model.DataStore;
 import model.EligibilityRule;
 import model.Veteran;
+import model.Honor;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class UserDashboardFrame extends JFrame {
     private Veteran loggedInVeteran;
@@ -21,22 +24,53 @@ public class UserDashboardFrame extends JFrame {
         setSize(600, 400);
         setLocationRelativeTo(null);
 
-        JPanel panel = new JPanel(new GridLayout(6,1,8,8));
+        JPanel panel = new JPanel(new BorderLayout(10,10));
         panel.setBorder(BorderFactory.createEmptyBorder(20,20,20,20));
 
-        panel.add(new JLabel("Service Number: " + veteran.getServiceNumber()));
-        panel.add(new JLabel("Rank: " + veteran.getRank()));
-        panel.add(new JLabel("Enlist Year: " + veteran.getEnlistYear()));
-        panel.add(new JLabel("Retirement Year: " + veteran.getRetirementYear()));
+        // Info tab
+        JPanel infoPanel = new JPanel(new GridLayout(6,1,8,8));
+        infoPanel.add(new JLabel("Service Number: " + veteran.getServiceNumber()));
+        infoPanel.add(new JLabel("Rank: " + veteran.getRank()));
+        infoPanel.add(new JLabel("Enlist Year: " + veteran.getEnlistYear()));
+        infoPanel.add(new JLabel("Retirement Year: " + veteran.getRetirementYear()));
 
         EligibilityController controller = new EligibilityController(new EligibilityRule());
         String eligibility = controller.evaluateSettlement(veteran);
-        panel.add(new JLabel("Eligibility: " + eligibility));
+        infoPanel.add(new JLabel("Eligibility: " + eligibility));
 
-        long honorsCount = store.getHonors().stream()
+        // Honors tab
+        List<Honor> honors = store.getHonors().stream()
             .filter(h -> h.getAwardYear() <= veteran.getRetirementYear())
-            .count();
-        panel.add(new JLabel("Honors received: " + honorsCount));
+            .collect(Collectors.toList());
+
+        DefaultListModel<String> honorsModel = new DefaultListModel<>();
+        for (Honor h : honors) {
+            honorsModel.addElement(h.getTitle() + " (" + h.getAwardYear() + ")");
+        }
+        JList<String> honorsList = new JList<>(honorsModel);
+
+        // Profile tab
+        UserProfilePanel profilePanel = new UserProfilePanel(veteran);
+
+        // Tabs
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("Info", infoPanel);
+        tabs.addTab("Honors", new JScrollPane(honorsList));
+        tabs.addTab("Profile", profilePanel);
+
+        panel.add(tabs, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        JButton logoutButton = new JButton("Logout");
+        buttonPanel.add(logoutButton);
+
+        logoutButton.addActionListener(e -> {
+            new UserLoginFrame(store).setVisible(true);
+            dispose();
+        });
+
+        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         add(panel);
     }
@@ -51,6 +85,8 @@ public class UserDashboardFrame extends JFrame {
         v.setRank("Major");
         v.setEnlistYear(1988);
         v.setRetirementYear(2012);
+        v.setContact("9800000003");
+        v.setNextOfKin("Laxmi Rai");
 
         store.getVeterans().add(v);
 

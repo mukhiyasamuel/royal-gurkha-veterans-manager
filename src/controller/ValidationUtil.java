@@ -1,14 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package controller;
 
-/**
- *
- * @author princeysunar
- */
-// controller/ValidationUtil.java
+import model.Veteran;
+import model.ValidationResult;
+
 public class ValidationUtil {
     public static ValidationResult validateVeteran(Veteran v, int currentYear) {
         ValidationResult vr = new ValidationResult();
