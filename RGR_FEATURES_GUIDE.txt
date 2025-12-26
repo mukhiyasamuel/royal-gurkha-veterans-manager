@@ -1,0 +1,102 @@
+// RGR-SPECIFIC FEATURES - Quick Reference Guide
+// ================================================
+
+/* === VETERAN MODEL ENHANCEMENTS === */
+
+// Veteran now includes pension-related fields:
+Veteran v = new Veteran("Name", "Rank", "ServiceNo", "GPS", 1990); // Still serving
+Veteran v = new Veteran("Name", "Rank", "ServiceNo", "AFPS", 1990, 2015, 45000.0); // Retired
+
+// New methods:
+v.getYearsOfService()    // Auto-calculates from yearJoined to yearRetired (or current year)
+v.getYearRetired()       // Returns retirement year (0 if still serving)
+v.getFinalSalary()       // Returns final salary for AFPS calculation
+v.setYearRetired(int)
+v.setFinalSalary(double)
+
+
+/* === PENSION CALCULATION === */
+
+// Calculate pension based on scheme type
+double pension = controller.calculatePension(veteran);
+
+// GPS Scheme: Years of Service * 500
+// Example: 25 years of service = 25 * 500 = £12,500
+
+// AFPS Scheme: Final Salary * 0.5
+// Example: £45,000 final salary = 45000 * 0.5 = £22,500
+
+
+/* === VETERAN LOGIN SYSTEM === */
+
+// Admin declares/registers veterans for login access
+controller.authenticate("admin", "admin"); // Login as admin first
+controller.declareVeteranUser("rgr001", "password123");
+controller.declareVeteranUser("rgr002", "password456");
+
+// Only declared veterans can login
+controller.logout();
+controller.authenticate("rgr001", "password123"); // SUCCESS
+controller.authenticate("rgr999", "anypassword");  // FAIL - not declared
+
+// Admin can remove veteran login access
+controller.authenticate("admin", "admin");
+controller.removeVeteranUser("rgr001");
+
+// View all declared veteran credentials (admin only)
+Map<String, String> credentials = controller.getVeteranCredentials();
+
+
+/* === ADMIN ACTIONS === */
+
+// 1. Update Pension Scheme (admin only)
+controller.updatePensionScheme("RGR-001", "GPS");
+controller.updatePensionScheme("RGR-002", "AFPS");
+
+// 2. Update Retirement Details (admin only)
+controller.updateRetirementDetails("RGR-001", 2020, 48000.0);
+// Sets yearRetired=2020, finalSalary=48000.0
+
+// 3. Manage Welfare Locations
+controller.addWelfareLocation("Location Name", "Address");
+controller.removeWelfareLocation("Location Name");
+controller.getWelfareLocations(); // View all locations
+
+
+/* === ROLE-BASED ACCESS CONTROL === */
+
+// Check current role and username
+Role role = controller.getCurrentRole();        // ADMIN or USER
+String username = controller.getCurrentUsername(); // "admin", "rgr001", etc.
+
+// Admin-only methods (return false if not admin):
+- declareVeteranUser()
+- removeVeteranUser()
+- updatePensionScheme()
+- updateRetirementDetails()
+- getVeteranCredentials()
+
+// Everyone can use:
+- viewVeterans()
+- getWelfareLocations()
+- calculatePension()
+
+
+/* === EXAMPLE WORKFLOW === */
+
+// 1. Admin logs in and sets up veteran user
+controller.authenticate("admin", "admin");
+controller.addVeteran("John Smith", "Captain", "RGR-100", "GPS", 1995);
+controller.updateRetirementDetails("RGR-100", 2020, 50000.0);
+controller.updatePensionScheme("RGR-100", "AFPS");
+controller.declareVeteranUser("john100", "secure123");
+
+// 2. Calculate pension
+Veteran vet = controller.searchByServiceNo("RGR-100");
+double pension = controller.calculatePension(vet);
+// Result: AFPS = 50000 * 0.5 = £25,000
+
+// 3. Veteran logs in (read-only access)
+controller.logout();
+controller.authenticate("john100", "secure123");
+// Can view data but cannot modify pension schemes or declare users

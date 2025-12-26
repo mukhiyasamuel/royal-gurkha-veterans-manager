@@ -1,0 +1,200 @@
+VALIDATION & EXCEPTION HANDLING - Implementation Guide
+========================================================
+
+OVERVIEW
+--------
+The RGRController now includes comprehensive validation and exception handling
+with user-friendly JOptionPane error messages for all invalid inputs.
+
+VALIDATION RULES IMPLEMENTED
+-----------------------------
+
+1. SERVICE NUMBER VALIDATION
+   - Cannot be null or empty
+   - Must be unique (no duplicates allowed)
+   - Trimmed automatically
+   - Error: "Service number cannot be empty."
+   - Error: "Duplicate service number: [X] already exists."
+
+2. NAME VALIDATION
+   - Cannot be null or empty
+   - Trimmed automatically
+   - Error: "Name cannot be empty."
+
+3. RANK VALIDATION
+   - Cannot be null or empty
+   - Trimmed automatically
+   - Error: "Rank cannot be empty."
+
+4. PENSION SCHEME VALIDATION
+   - Cannot be null or empty
+   - Trimmed automatically
+   - Error: "Pension scheme cannot be empty."
+
+5. YEAR VALIDATION
+   - Must be between 1950 and 2025
+   - Validated for yearJoined and yearRetired
+   - Error: "Year Joined must be between 1950 and 2025. Received: [X]"
+
+6. RETIREMENT YEAR LOGIC
+   - Must be >= yearJoined
+   - Cannot retire before joining
+   - Error: "Retirement year ([X]) cannot be before year joined ([Y])."
+
+7. FINANCIAL FIELDS VALIDATION
+   - Final salary must be non-negative (>= 0)
+   - Error: "Final salary cannot be negative. Received: £[X]"
+
+8. NUMBER FORMAT VALIDATION
+   - Throws NumberFormatException for invalid integers
+   - Throws NumberFormatException for invalid doubles
+   - Prevents negative financial values
+   - Error: "[Field] must be a valid integer. Received: [X]"
+   - Error: "[Field] must be a valid number. Received: [X]"
+   - Error: "[Field] cannot be negative. Received: [X]"
+
+HELPER METHODS
+--------------
+
+1. validateInteger(String value, String fieldName)
+   - Validates and parses integer from string
+   - Throws NumberFormatException with descriptive message
+   - Usage: int year = RGRController.validateInteger(yearField.getText(), "Year Joined");
+
+2. validateDouble(String value, String fieldName)
+   - Validates and parses double from string
+   - Prevents negative numbers
+   - Throws NumberFormatException with descriptive message
+   - Usage: double salary = RGRController.validateDouble(salaryField.getText(), "Final Salary");
+
+3. showError(String message)
+   - Displays JOptionPane error dialog
+   - Title: "Validation Error"
+   - Icon: ERROR_MESSAGE
+
+4. showSuccess(String message)
+   - Displays JOptionPane success dialog
+   - Title: "Success"
+   - Icon: INFORMATION_MESSAGE
+   - Usage: RGRController.showSuccess("Veteran added successfully!");
+
+5. showWarning(String message)
+   - Displays JOptionPane warning dialog
+   - Title: "Warning"
+   - Icon: WARNING_MESSAGE
+   - Usage: RGRController.showWarning("Year must be a valid number");
+
+UPDATED METHODS WITH VALIDATION
+--------------------------------
+
+1. addVeteran(name, rank, serviceNo, pensionScheme, yearJoined)
+   ✓ Validates all fields
+   ✓ Checks for duplicates
+   ✓ Validates year range
+   ✓ Shows error dialogs
+   ✓ Returns false on validation failure
+
+2. updateVeteran(serviceNo, name, rank, pensionScheme, yearJoined)
+   ✓ Validates service number exists
+   ✓ Validates all fields
+   ✓ Validates year range
+   ✓ Shows error dialogs
+   ✓ Returns false on validation failure
+
+3. updateRetirementDetails(serviceNo, yearRetired, finalSalary)
+   ✓ Admin-only check
+   ✓ Validates service number exists
+   ✓ Validates year range
+   ✓ Checks retirement >= join year
+   ✓ Prevents negative salary
+   ✓ Shows error dialogs
+   ✓ Returns false on validation failure
+
+EXCEPTION HANDLING
+------------------
+
+All methods include try-catch blocks for:
+- NumberFormatException (invalid number formats)
+- Generic Exception (unexpected errors)
+
+All exceptions display user-friendly JOptionPane messages.
+
+USAGE EXAMPLES
+--------------
+
+Example 1: Add Veteran with Validation
+---------------------------------------
+try {
+    int year = RGRController.validateInteger(yearField.getText(), "Year Joined");
+    boolean added = controller.addVeteran(
+        nameField.getText(),
+        rankField.getText(),
+        serviceNoField.getText(),
+        schemeField.getText(),
+        year
+    );
+    if (added) {
+        RGRController.showSuccess("Veteran added successfully!");
+        refreshData();
+    }
+} catch (NumberFormatException ex) {
+    RGRController.showWarning(ex.getMessage());
+}
+
+Example 2: Update Retirement Details
+-------------------------------------
+try {
+    int year = RGRController.validateInteger(yearField.getText(), "Retirement Year");
+    double salary = RGRController.validateDouble(salaryField.getText(), "Final Salary");
+    
+    boolean updated = controller.updateRetirementDetails(serviceNo, year, salary);
+    if (updated) {
+        RGRController.showSuccess("Retirement details updated!");
+    }
+} catch (NumberFormatException ex) {
+    RGRController.showWarning(ex.getMessage());
+}
+
+ERROR MESSAGE EXAMPLES
+----------------------
+
+✗ Empty service number:
+  "Service number cannot be empty."
+
+✗ Duplicate service number:
+  "Duplicate service number: RGR-001 already exists."
+
+✗ Invalid year range:
+  "Year Joined must be between 1950 and 2025. Received: 1900"
+
+✗ Invalid number format:
+  "Year Joined must be a valid integer. Received: abc"
+
+✗ Negative salary:
+  "Final salary cannot be negative. Received: £-5000.0"
+
+✗ Retirement before join:
+  "Retirement year (1995) cannot be before year joined (2000)."
+
+✗ Veteran not found:
+  "Veteran with service number RGR-999 not found."
+
+VALIDATION CONSTANTS
+--------------------
+MIN_YEAR = 1950
+MAX_YEAR = 2025
+CURRENT_YEAR = [current year from system]
+
+TESTING
+-------
+Run TestValidationConsole.java to verify all validation features:
+  javac -d build/classes -sourcepath src src/TestValidationConsole.java
+  java -cp build/classes TestValidationConsole
+
+This will test:
+✓ Duplicate detection
+✓ Empty field validation
+✓ Year range validation
+✓ Negative number prevention
+✓ NumberFormatException handling
+✓ validateInteger() and validateDouble() helpers
