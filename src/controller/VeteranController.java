@@ -1,8 +1,8 @@
 package controller;
 
-import model.Veteran;
 import java.time.LocalDate;
 import java.util.*;
+import model.Veteran;
 
 /**
  * Controller class for managing Veteran operations
@@ -14,12 +14,16 @@ public class VeteranController {
     private ArrayList<Veteran> veterans;  // Main storage - ArrayList
     private Queue<Veteran> recentlyAdded;  // Last 5 added - Queue (LinkedList implementation)
     private HashMap<String, Veteran> veteranMap;  // Quick lookup - HashMap
+    private Queue<String[]> recentActivities;  // Track recent activities (Added, Edited, Deleted)
+    private ArrayList<Veteran> backupVeterans;  // For undo functionality
     
     // Constructor - Initialize with dummy data
     public VeteranController() {
         veterans = new ArrayList<>();
         recentlyAdded = new LinkedList<>();
         veteranMap = new HashMap<>();
+        recentActivities = new LinkedList<>();
+        backupVeterans = new ArrayList<>();
         loadDummyData();
     }
     
@@ -76,6 +80,9 @@ public class VeteranController {
      * Validation: Check for duplicate service number
      */
     public boolean addVeteran(Veteran veteran) throws IllegalArgumentException {
+        // Create backup before adding
+        createBackup();
+        
         // Validation - Check duplicate
         if (veteranMap.containsKey(veteran.getServiceNumber())) {
             throw new IllegalArgumentException("Veteran with service number " + 
@@ -104,6 +111,10 @@ public class VeteranController {
             recentlyAdded.poll();  // Remove oldest if more than 5
         }
         
+        // Track activity
+        addActivity(veteran.getServiceNumber(), veteran.getFullName(), 
+                   veteran.getRank(), veteran.getPensionScheme(), "Added");
+        
         return true;
     }
     
@@ -130,6 +141,11 @@ public class VeteranController {
             if (veterans.get(i).getServiceNumber().equals(serviceNumber)) {
                 veterans.set(i, updatedVeteran);
                 veteranMap.put(serviceNumber, updatedVeteran);
+                
+                // Track activity
+                addActivity(updatedVeteran.getServiceNumber(), updatedVeteran.getFullName(), 
+                           updatedVeteran.getRank(), updatedVeteran.getPensionScheme(), "Edited");
+                
                 return true;
             }
         }
@@ -140,8 +156,15 @@ public class VeteranController {
      * DELETE - Remove veteran
      */
     public boolean deleteVeteran(String serviceNumber) {
+        // Create backup before deleting
+        createBackup();
+        
         Veteran veteran = veteranMap.get(serviceNumber);
         if (veteran != null) {
+            // Track activity before deleting
+            addActivity(veteran.getServiceNumber(), veteran.getFullName(), 
+                       veteran.getRank(), veteran.getPensionScheme(), "Deleted");
+            
             veterans.remove(veteran);
             veteranMap.remove(serviceNumber);
             recentlyAdded.remove(veteran);  // Also remove from recent queue
@@ -232,16 +255,128 @@ public class VeteranController {
     }
     
     /**
-     * SORT - Quick Sort by Name (Ascending)
+     * SORT - Merge Sort by Name (Alphabetically by first letter)
+     * Sorts veterans by their full name in alphabetical order (A to Z)
+     * Uses Merge Sort algorithm with O(n log n) time complexity
      */
     public ArrayList<Veteran> sortByName(boolean ascending) {
+        // Create a copy of the veterans list to avoid modifying original during sort
         ArrayList<Veteran> sortedList = new ArrayList<>(veterans);
-        if (ascending) {
-            sortedList.sort(Comparator.comparing(Veteran::getFullName));
-        } else {
-            sortedList.sort(Comparator.comparing(Veteran::getFullName).reversed());
+        
+        // Apply merge sort algorithm
+        if (sortedList.size() > 1) {
+            mergeSortByName(sortedList, 0, sortedList.size() - 1, ascending);
         }
+        
+        // Update the main veterans list with sorted data
+        veterans = sortedList;
+        
         return sortedList;
+    }
+    
+    /**
+     * Merge Sort - Recursive divide and conquer algorithm
+     * Divides the array into two halves, sorts them, and merges them back
+     * @param list - List of veterans to sort
+     * @param left - Starting index of the array segment
+     * @param right - Ending index of the array segment
+     * @param ascending - Sort order (true = A to Z, false = Z to A)
+     */
+    private void mergeSortByName(ArrayList<Veteran> list, int left, int right, boolean ascending) {
+        // Base case: if left >= right, array has 0 or 1 element (already sorted)
+        if (left < right) {
+            // Find the middle point to divide the array into two halves
+            int middle = left + (right - left) / 2;
+            
+            // Recursively sort the first half
+            mergeSortByName(list, left, middle, ascending);
+            
+            // Recursively sort the second half
+            mergeSortByName(list, middle + 1, right, ascending);
+            
+            // Merge the two sorted halves
+            mergeByName(list, left, middle, right, ascending);
+        }
+    }
+    
+    /**
+     * Merge function - Combines two sorted subarrays into one sorted array
+     * Compares elements from both halves and places them in sorted order
+     * @param list - List of veterans
+     * @param left - Starting index of left subarray
+     * @param middle - Ending index of left subarray (middle + 1 is start of right subarray)
+     * @param right - Ending index of right subarray
+     * @param ascending - Sort order (true = A to Z, false = Z to A)
+     */
+    private void mergeByName(ArrayList<Veteran> list, int left, int middle, int right, boolean ascending) {
+        // Calculate sizes of two subarrays to be merged
+        int leftSize = middle - left + 1;
+        int rightSize = right - middle;
+        
+        // Create temporary arrays to hold the two halves
+        ArrayList<Veteran> leftArray = new ArrayList<>(leftSize);
+        ArrayList<Veteran> rightArray = new ArrayList<>(rightSize);
+        
+        // Copy data to temporary left array
+        for (int i = 0; i < leftSize; i++) {
+            leftArray.add(list.get(left + i));
+        }
+        
+        // Copy data to temporary right array
+        for (int j = 0; j < rightSize; j++) {
+            rightArray.add(list.get(middle + 1 + j));
+        }
+        
+        // Merge the temporary arrays back into the original list
+        int i = 0; // Initial index of left subarray
+        int j = 0; // Initial index of right subarray
+        int k = left; // Initial index of merged array
+        
+        // Compare elements from left and right arrays and merge in sorted order
+        while (i < leftSize && j < rightSize) {
+            // Get names and convert to lowercase for case-insensitive comparison
+            String leftName = leftArray.get(i).getFullName().toLowerCase();
+            String rightName = rightArray.get(j).getFullName().toLowerCase();
+            
+            // Compare names alphabetically
+            int comparison = leftName.compareTo(rightName);
+            
+            // Place the smaller (or larger for descending) element in the merged array
+            if (ascending) {
+                // For ascending: if left name comes before right name alphabetically
+                if (comparison <= 0) {
+                    list.set(k, leftArray.get(i));
+                    i++;
+                } else {
+                    list.set(k, rightArray.get(j));
+                    j++;
+                }
+            } else {
+                // For descending: if right name comes before left name alphabetically
+                if (comparison >= 0) {
+                    list.set(k, leftArray.get(i));
+                    i++;
+                } else {
+                    list.set(k, rightArray.get(j));
+                    j++;
+                }
+            }
+            k++;
+        }
+        
+        // Copy remaining elements from left array (if any)
+        while (i < leftSize) {
+            list.set(k, leftArray.get(i));
+            i++;
+            k++;
+        }
+        
+        // Copy remaining elements from right array (if any)
+        while (j < rightSize) {
+            list.set(k, rightArray.get(j));
+            j++;
+            k++;
+        }
     }
     
     /**
@@ -268,6 +403,38 @@ public class VeteranController {
             sortedList.sort(Comparator.comparingDouble(Veteran::getMonthlyPension).reversed());
         }
         return sortedList;
+    }
+    
+    /**
+     * SORT - Sort by Military Rank Hierarchy
+     * Sorts veterans from highest rank to lowest rank
+     */
+    public void sortByMilitaryRank() {
+        // Define rank hierarchy - higher number = higher rank
+        HashMap<String, Integer> rankHierarchy = new HashMap<>();
+        rankHierarchy.put("General", 15);
+        rankHierarchy.put("Lieutenant General", 14);
+        rankHierarchy.put("Major General", 13);
+        rankHierarchy.put("Brigadier", 12);
+        rankHierarchy.put("Colonel", 11);
+        rankHierarchy.put("Lieutenant Colonel", 10);
+        rankHierarchy.put("Major", 9);
+        rankHierarchy.put("Captain", 8);
+        rankHierarchy.put("Lieutenant", 7);
+        rankHierarchy.put("Second Lieutenant", 6);
+        rankHierarchy.put("Warrant Officer", 5);
+        rankHierarchy.put("Havildar", 4);
+        rankHierarchy.put("Naik", 3);
+        rankHierarchy.put("Lance Naik", 2);
+        rankHierarchy.put("Sepoy", 1);
+        rankHierarchy.put("Rifleman", 1);
+        
+        // Sort veterans by rank hierarchy (descending - highest rank first)
+        veterans.sort((v1, v2) -> {
+            int rank1 = rankHierarchy.getOrDefault(v1.getRank(), 0);
+            int rank2 = rankHierarchy.getOrDefault(v2.getRank(), 0);
+            return Integer.compare(rank2, rank1); // Descending order
+        });
     }
     
     /**
@@ -308,5 +475,59 @@ public class VeteranController {
      */
     public int getTotalCount() {
         return veterans.size();
+    }
+    
+    /**
+     * Get recent activities (Added, Edited, Deleted)
+     */
+    public Queue<String[]> getRecentActivities() {
+        return new LinkedList<>(recentActivities);
+    }
+    
+    /**
+     * Add activity to recent activities queue
+     */
+    private void addActivity(String serviceNo, String name, String rank, String scheme, String action) {
+        String[] activity = {serviceNo, name, rank, scheme, action};
+        recentActivities.offer(activity);
+        if (recentActivities.size() > 5) {
+            recentActivities.poll();  // Keep only last 5
+        }
+    }
+    
+    /**
+     * SORT - Sort by Service Number
+     */
+    public void sortByServiceNumber() {
+        veterans.sort(Comparator.comparing(Veteran::getServiceNumber));
+    }
+    
+    /**
+     * Create backup for undo functionality
+     */
+    private void createBackup() {
+        backupVeterans = new ArrayList<>();
+        for (Veteran v : veterans) {
+            backupVeterans.add(v);
+        }
+    }
+    
+    /**
+     * Undo last change - restore from backup
+     */
+    public boolean undoLastChange() {
+        if (backupVeterans != null && !backupVeterans.isEmpty()) {
+            veterans = new ArrayList<>(backupVeterans);
+            
+            // Rebuild the HashMap
+            veteranMap.clear();
+            for (Veteran v : veterans) {
+                veteranMap.put(v.getServiceNumber(), v);
+            }
+            
+            backupVeterans = new ArrayList<>();
+            return true;
+        }
+        return false;
     }
 }

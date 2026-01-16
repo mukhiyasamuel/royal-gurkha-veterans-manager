@@ -1,13 +1,8 @@
-/*
- * Admin Dashboard View
- * Created using NetBeans GUI Builder
- */
 package view;
 
 import controller.AuthController;
 import controller.VeteranController;
 import controller.WelfareOfficeController;
-import model.Veteran;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -24,6 +19,13 @@ public class AdminDashboardView extends javax.swing.JFrame {
     private AuthController authController;
     
     private CardLayout contentCardLayout;
+    
+    // Dashboard components for dynamic updates
+    private JLabel totalVeteransLabel;
+    private JLabel gpsCountLabel;
+    private JLabel afpsCountLabel;
+    private JLabel avgYearsLabel;
+    private DefaultTableModel recentActivitiesModel;
     
     /**
      * Creates new form AdminDashboardView
@@ -48,7 +50,7 @@ public class AdminDashboardView extends javax.swing.JFrame {
         
         // Add different tabs as cards
         contentPanel.add(createDashboardTab(), "DASHBOARD");
-        contentPanel.add(new VeteranManagementPanel(veteranController), "VETERANS");
+        contentPanel.add(new VeteranManagementPanel(veteranController, this), "VETERANS");
         contentPanel.add(new WelfareOfficePanel(welfareController), "OFFICES");
         
         // Show dashboard by default
@@ -83,7 +85,7 @@ public class AdminDashboardView extends javax.swing.JFrame {
     
     
     /**
-     * Create the Dashboard Tab with statistics and recent veterans
+     * Create the Dashboard Tab with statistics and recent activities
      */
     private JPanel createDashboardTab() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
@@ -96,38 +98,43 @@ public class AdminDashboardView extends javax.swing.JFrame {
         titleLabel.setForeground(new Color(20, 50, 20));
         panel.add(titleLabel, BorderLayout.NORTH);
         
-        // Statistics Cards
-        JPanel statsPanel = new JPanel(new GridLayout(2, 4, 15, 15));
+        // Statistics Cards - Only 4 cards in a single row
+        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 15, 15));
         statsPanel.setBackground(Color.WHITE);
         
-        // Stat cards
+        // Stat cards - Only 4: Total Veterans, GPS, AFPS, Avg Service Years
         int totalVeterans = veteranController.getTotalCount();
         int gpsCount = veteranController.getCountByScheme("GPS");
         int afpsCount = veteranController.getCountByScheme("AFPS");
         double avgYears = veteranController.getAverageServiceYears();
-        int totalOffices = welfareController.getTotalCount();
         
-        statsPanel.add(createStatCard("Total Veterans", String.valueOf(totalVeterans), 
-                new Color(42, 87, 42)));
-        statsPanel.add(createStatCard("GPS Scheme", String.valueOf(gpsCount), 
-                new Color(178, 34, 34)));
-        statsPanel.add(createStatCard("AFPS Scheme", String.valueOf(afpsCount), 
-                new Color(23, 162, 184)));
-        statsPanel.add(createStatCard("Avg Service Years", 
-                String.format("%.1f", avgYears), new Color(218, 165, 32)));
-        statsPanel.add(createStatCard("Welfare Offices", String.valueOf(totalOffices), 
-                new Color(40, 167, 69)));
-        statsPanel.add(createStatCard("Active Status", String.valueOf(totalVeterans), 
-                new Color(255, 193, 7)));
-        statsPanel.add(createStatCard("Regions Served", "5", new Color(76, 139, 76)));
-        statsPanel.add(createStatCard("System Status", "Online", new Color(40, 167, 69)));
+        // Create stat cards and store label references
+        Object[] totalVetCard = createStatCardWithLabel("Total Veterans", String.valueOf(totalVeterans), 
+                new Color(42, 87, 42));
+        totalVeteransLabel = (JLabel) totalVetCard[1];
+        statsPanel.add((JPanel) totalVetCard[0]);
+        
+        Object[] gpsCard = createStatCardWithLabel("GPS Scheme", String.valueOf(gpsCount), 
+                new Color(178, 34, 34));
+        gpsCountLabel = (JLabel) gpsCard[1];
+        statsPanel.add((JPanel) gpsCard[0]);
+        
+        Object[] afpsCard = createStatCardWithLabel("AFPS Scheme", String.valueOf(afpsCount), 
+                new Color(23, 162, 184));
+        afpsCountLabel = (JLabel) afpsCard[1];
+        statsPanel.add((JPanel) afpsCard[0]);
+        
+        Object[] avgYearsCard = createStatCardWithLabel("Avg Service Years", 
+                String.format("%.1f", avgYears), new Color(218, 165, 32));
+        avgYearsLabel = (JLabel) avgYearsCard[1];
+        statsPanel.add((JPanel) avgYearsCard[0]);
         
         JPanel centerPanel = new JPanel(new BorderLayout(0, 20));
         centerPanel.setBackground(Color.WHITE);
         centerPanel.add(statsPanel, BorderLayout.NORTH);
         
-        // Recently Added Veterans (Using Queue)
-        JPanel recentPanel = createRecentVeteransPanel();
+        // Recent Activities table
+        JPanel recentPanel = createRecentActivitiesPanel();
         centerPanel.add(recentPanel, BorderLayout.CENTER);
         
         panel.add(centerPanel, BorderLayout.CENTER);
@@ -136,40 +143,34 @@ public class AdminDashboardView extends javax.swing.JFrame {
     }
     
     /**
-     * Create panel showing recently added veterans from Queue
+     * Create panel showing recent activities (Added, Edited, Deleted)
      */
-    private JPanel createRecentVeteransPanel() {
+    private JPanel createRecentActivitiesPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(
                         BorderFactory.createLineBorder(new Color(42, 87, 42), 2),
-                        "Recently Added Veterans (Last 5)",
+                        "Recent Activities",
                         0, 0, new Font("Segoe UI", Font.BOLD, 16), new Color(20, 50, 20)),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         
-        // Table
-        String[] columns = {"Service No.", "Name", "Rank", "Scheme", "Service Years"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        // Table with Activity column
+        String[] columns = {"Service No.", "Name", "Rank", "Scheme", "Activity"};
+        recentActivitiesModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
         
-        // Get recently added from Queue
-        Queue<Veteran> recent = veteranController.getRecentlyAdded();
-        for (Veteran v : recent) {
-            model.addRow(new Object[]{
-                v.getServiceNumber(),
-                v.getFullName(),
-                v.getRank(),
-                v.getPensionScheme(),
-                v.getServiceYears()
-            });
+        // Get recent activities from controller
+        Queue<String[]> activities = veteranController.getRecentActivities();
+        for (String[] activity : activities) {
+            recentActivitiesModel.addRow(activity);
         }
         
-        JTable table = new JTable(model);
+        JTable table = new JTable(recentActivitiesModel);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         table.setRowHeight(30);
         table.getTableHeader().setBackground(new Color(20, 50, 20));
@@ -205,6 +206,50 @@ public class AdminDashboardView extends javax.swing.JFrame {
         card.add(labelLabel, BorderLayout.SOUTH);
         
         return card;
+    }
+    
+    /**
+     * Create a statistic card and return both panel and value label
+     * Returns: Object[0] = JPanel, Object[1] = JLabel (value label for updates)
+     */
+    private Object[] createStatCardWithLabel(String label, String value, Color color) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(color, 2),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        
+        JLabel valueLabel = new JLabel(value, SwingConstants.CENTER);
+        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        valueLabel.setForeground(color);
+        
+        JLabel labelLabel = new JLabel(label, SwingConstants.CENTER);
+        labelLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        labelLabel.setForeground(new Color(51, 51, 51));
+        
+        card.add(valueLabel, BorderLayout.CENTER);
+        card.add(labelLabel, BorderLayout.SOUTH);
+        
+        return new Object[]{card, valueLabel};
+    }
+    
+    /**
+     * Public method to refresh dashboard statistics and recent activities
+     * Called after add/edit/delete operations on veterans
+     */
+    public void refreshDashboard() {
+        // Update statistics
+        totalVeteransLabel.setText(String.valueOf(veteranController.getTotalCount()));
+        gpsCountLabel.setText(String.valueOf(veteranController.getCountByScheme("GPS")));
+        afpsCountLabel.setText(String.valueOf(veteranController.getCountByScheme("AFPS")));
+        avgYearsLabel.setText(String.format("%.1f", veteranController.getAverageServiceYears()));
+        
+        // Update recent activities table
+        recentActivitiesModel.setRowCount(0);
+        Queue<String[]> activities = veteranController.getRecentActivities();
+        for (String[] activity : activities) {
+            recentActivitiesModel.addRow(activity);
+        }
     }
 
     /**

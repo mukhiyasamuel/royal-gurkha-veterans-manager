@@ -16,9 +16,11 @@ public class VeteranManagementPanel extends JPanel {
     private VeteranController controller;
     private JTable veteranTable;
     private DefaultTableModel tableModel;
+    private AdminDashboardView dashboardView;
     
-    public VeteranManagementPanel(VeteranController controller) {
+    public VeteranManagementPanel(VeteranController controller, AdminDashboardView dashboardView) {
         this.controller = controller;
+        this.dashboardView = dashboardView;
         initComponents();
         loadVeteransIntoTable();
     }
@@ -84,29 +86,29 @@ public class VeteranManagementPanel extends JPanel {
         sortRankBtn.setPreferredSize(new Dimension(130, 35));
         sortRankBtn.addActionListener(e -> sortByRank());
         
-        // Sort by Age button
-        JButton sortAgeBtn = new JButton("Sort by Age");
-        sortAgeBtn.setBackground(ColorScheme.INFO);
-        sortAgeBtn.setForeground(ColorScheme.WHITE);
-        sortAgeBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        sortAgeBtn.setFocusPainted(false);
-        sortAgeBtn.setBorderPainted(false);
-        sortAgeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        sortAgeBtn.setPreferredSize(new Dimension(120, 35));
-        sortAgeBtn.addActionListener(e -> sortByAge());
+        // Sort by Service No button
+        JButton sortServiceNoBtn = new JButton("Sort by Service No.");
+        sortServiceNoBtn.setBackground(ColorScheme.INFO);
+        sortServiceNoBtn.setForeground(ColorScheme.WHITE);
+        sortServiceNoBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        sortServiceNoBtn.setFocusPainted(false);
+        sortServiceNoBtn.setBorderPainted(false);
+        sortServiceNoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        sortServiceNoBtn.setPreferredSize(new Dimension(160, 35));
+        sortServiceNoBtn.addActionListener(e -> sortByServiceNo());
         
         searchSortPanel.add(searchField);
         searchSortPanel.add(searchBtn);
         searchSortPanel.add(sortNameBtn);
         searchSortPanel.add(sortRankBtn);
-        searchSortPanel.add(sortAgeBtn);
+        searchSortPanel.add(sortServiceNoBtn);
         
         topPanel.add(searchSortPanel, BorderLayout.CENTER);
         add(topPanel, BorderLayout.NORTH);
         
-        // Table (without Actions column)
-        String[] columns = {"Service No.", "Name", "Rank", "Scheme", "Pension (NPR)", 
-                           "Service Years", "Status"};
+        // Table - Modified columns per wireframe
+        String[] columns = {"Service No.", "Name", "Rank", "Pension Scheme", 
+                           "Service Joined", "Service End", "Status"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -125,7 +127,7 @@ public class VeteranManagementPanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(veteranTable);
         add(scrollPane, BorderLayout.CENTER);
         
-        // Bottom panel with Add, Delete, Update buttons
+        // Bottom panel with Add, Delete, Update, Undo, Clear buttons
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         bottomPanel.setBackground(ColorScheme.WHITE);
         
@@ -159,9 +161,31 @@ public class VeteranManagementPanel extends JPanel {
         updateBtn.setPreferredSize(new Dimension(100, 35));
         updateBtn.addActionListener(e -> updateSelectedVeteran());
         
+        JButton undoBtn = new JButton("Undo");
+        undoBtn.setBackground(new Color(255, 193, 7));
+        undoBtn.setForeground(ColorScheme.WHITE);
+        undoBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        undoBtn.setFocusPainted(false);
+        undoBtn.setBorderPainted(false);
+        undoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        undoBtn.setPreferredSize(new Dimension(100, 35));
+        undoBtn.addActionListener(e -> undoLastAction());
+        
+        JButton clearBtn = new JButton("Clear");
+        clearBtn.setBackground(ColorScheme.GRAY);
+        clearBtn.setForeground(ColorScheme.WHITE);
+        clearBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        clearBtn.setFocusPainted(false);
+        clearBtn.setBorderPainted(false);
+        clearBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        clearBtn.setPreferredSize(new Dimension(100, 35));
+        clearBtn.addActionListener(e -> clearSearch());
+        
         bottomPanel.add(addBtn);
         bottomPanel.add(deleteBtn);
         bottomPanel.add(updateBtn);
+        bottomPanel.add(undoBtn);
+        bottomPanel.add(clearBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }
     
@@ -181,8 +205,8 @@ public class VeteranManagementPanel extends JPanel {
                 veteran.getFullName(),
                 veteran.getRank(),
                 veteran.getPensionScheme(),
-                String.format("%,.2f", veteran.getMonthlyPension()),
-                veteran.getServiceYears(),
+                veteran.getServiceStartDate(),
+                veteran.getServiceEndDate(),
                 veteran.getStatus()
             });
         } else {
@@ -194,8 +218,8 @@ public class VeteranManagementPanel extends JPanel {
                     v.getFullName(),
                     v.getRank(),
                     v.getPensionScheme(),
-                    String.format("%,.2f", v.getMonthlyPension()),
-                    v.getServiceYears(),
+                    v.getServiceStartDate(),
+                    v.getServiceEndDate(),
                     v.getStatus()
                 });
             }
@@ -219,8 +243,8 @@ public class VeteranManagementPanel extends JPanel {
     }
     
     private void sortByRank() {
-        // Sort using service years as proxy for rank seniority
-        controller.sortByServiceYears(false);
+        // Sort by military rank hierarchy
+        controller.sortByMilitaryRank();
         loadVeteransIntoTable();
         JOptionPane.showMessageDialog(this,
             "Veterans sorted by rank (service years) successfully!",
@@ -228,13 +252,40 @@ public class VeteranManagementPanel extends JPanel {
             JOptionPane.INFORMATION_MESSAGE);
     }
     
-    private void sortByAge() {
-        // Sort by service years (older veterans have more service years)
-        controller.sortByServiceYears(false);
+    private void sortByServiceNo() {
+        // Sort by service number
+        controller.sortByServiceNumber();
         loadVeteransIntoTable();
         JOptionPane.showMessageDialog(this,
-            "Veterans sorted by age (service years) successfully!",
+            "Veterans sorted by service number successfully!",
             "Sort Complete",
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void undoLastAction() {
+        // Undo functionality - restore from backup
+        boolean success = controller.undoLastChange();
+        if (success) {
+            loadVeteransIntoTable();
+            dashboardView.refreshDashboard();
+            JOptionPane.showMessageDialog(this,
+                "Last action has been undone!",
+                "Undo Complete",
+                JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "No action to undo!",
+                "Undo",
+                JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    private void clearSearch() {
+        // Reload all veterans to clear search/filter
+        loadVeteransIntoTable();
+        JOptionPane.showMessageDialog(this,
+            "Search cleared. Showing all veterans.",
+            "Clear",
             JOptionPane.INFORMATION_MESSAGE);
     }
     
@@ -274,6 +325,7 @@ public class VeteranManagementPanel extends JPanel {
         if (confirm == JOptionPane.YES_OPTION) {
             controller.deleteVeteran(serviceNo);
             loadVeteransIntoTable();
+            dashboardView.refreshDashboard();
             JOptionPane.showMessageDialog(this, "Veteran deleted successfully!");
         }
     }
@@ -333,30 +385,44 @@ public class VeteranManagementPanel extends JPanel {
         // Form fields with improved styling
         JTextField serviceField = createStyledTextField(15);
         JTextField nameField = createStyledTextField(15);
-        JTextField rankField = createStyledTextField(15);
+        JComboBox<String> rankField = new JComboBox<>(new String[]{
+            "Rifleman", "Lance Naik", "Naik", "Havildar", "Havildar Major",
+            "Jemadar", "Subedar", "Subedar Major", "Lieutenant", "Captain",
+            "Major", "Lieutenant Colonel", "Colonel", "Brigadier", "Major General"
+        });
+        rankField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        rankField.setPreferredSize(new Dimension(200, 32));
         JTextField dobField = createStyledTextField(15);
-        JTextField startDateField = createStyledTextField(15);
-        JTextField endDateField = createStyledTextField(15);
+        JComboBox<String> startDateField = new JComboBox<>(new String[]{"1914", "1915", "1939", "1940", "1942"});
+        startDateField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        startDateField.setPreferredSize(new Dimension(200, 32));
+        JComboBox<String> endDateField = new JComboBox<>(new String[]{"1918", "1945", "1946", "1947", "1948"});
+        endDateField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        endDateField.setPreferredSize(new Dimension(200, 32));
         JComboBox<String> schemeCombo = new JComboBox<>(new String[]{"GPS", "AFPS"});
         schemeCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         schemeCombo.setPreferredSize(new Dimension(200, 32));
-        JTextField pensionField = createStyledTextField(15);
+        JComboBox<String> pensionField = new JComboBox<>(new String[]{"35000", "40000", "45000", "50000"});
+        pensionField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        pensionField.setPreferredSize(new Dimension(200, 32));
         JTextField contactField = createStyledTextField(15);
         JTextField addressField = createStyledTextField(15);
-        JTextField regimentField = createStyledTextField(15);
+        JComboBox<String> regimentField = new JComboBox<>(new String[]{"First Gurkha Rifles", "Second Gurkha Rifles"});
+        regimentField.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        regimentField.setPreferredSize(new Dimension(200, 32));
         
         // Add all fields to panel
         addImprovedFormField(formPanel, gbc, row++, "Service Number:", serviceField, "Format: 6 digits");
         addImprovedFormField(formPanel, gbc, row++, "Full Name:", nameField, "");
-        addImprovedFormField(formPanel, gbc, row++, "Rank:", rankField, "e.g., Havildar, Rifleman");
+        addImprovedFormField(formPanel, gbc, row++, "Rank:", rankField, "Select rank");
         addImprovedFormField(formPanel, gbc, row++, "Date of Birth:", dobField, "Format: YYYY-MM-DD");
-        addImprovedFormField(formPanel, gbc, row++, "Service Start:", startDateField, "Format: YYYY-MM-DD");
-        addImprovedFormField(formPanel, gbc, row++, "Service End:", endDateField, "Format: YYYY-MM-DD");
+        addImprovedFormField(formPanel, gbc, row++, "Service Start:", startDateField, "Select year");
+        addImprovedFormField(formPanel, gbc, row++, "Service End:", endDateField, "Select year");
         addImprovedFormField(formPanel, gbc, row++, "Pension Scheme:", schemeCombo, "GPS or AFPS");
-        addImprovedFormField(formPanel, gbc, row++, "Monthly Pension:", pensionField, "Amount in NPR");
-        addImprovedFormField(formPanel, gbc, row++, "Contact Number:", contactField, "+977-98XXXXXXXX");
+        addImprovedFormField(formPanel, gbc, row++, "Monthly Pension:", pensionField, "Select amount");
+        addImprovedFormField(formPanel, gbc, row++, "Contact Number:", contactField, "10 digits");
         addImprovedFormField(formPanel, gbc, row++, "Address:", addressField, "");
-        addImprovedFormField(formPanel, gbc, row++, "Regiment:", regimentField, "");
+        addImprovedFormField(formPanel, gbc, row++, "Regiment:", regimentField, "Select regiment");
         
         JScrollPane scrollPane = new JScrollPane(formPanel);
         scrollPane.setBorder(null);
@@ -374,50 +440,98 @@ public class VeteranManagementPanel extends JPanel {
         JButton saveBtn = createStyledButton("Save", ColorScheme.SUCCESS);
         saveBtn.addActionListener(e -> {
             try {
-                // Validation
+                // Get all field values
                 String serviceNo = serviceField.getText().trim();
-                if (!ValidationUtil.isValidServiceNumber(serviceNo)) {
-                    throw new IllegalArgumentException("Invalid service number! Must be 6 digits.");
-                }
-                
                 String name = nameField.getText().trim();
+                String rank = (String) rankField.getSelectedItem();
+                String dob = dobField.getText().trim();
+                String contact = contactField.getText().trim();
+                String address = addressField.getText().trim();
+                
+                // 1. Check for empty fields first
+                if (serviceNo.isEmpty() || name.isEmpty() || 
+                    dob.isEmpty() || contact.isEmpty() || address.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, 
+                            "All fields must be filled!", 
+                            "Empty Fields", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                // 2. Collect validation errors
+                java.util.List<String> errors = new java.util.ArrayList<>();
+                
+                // Validate service number
+                if (!ValidationUtil.isValidServiceNumber(serviceNo)) {
+                    errors.add("Invalid service number! Must be 6 digits.");
+                }
+                
+                // Validate name (text only)
                 if (!ValidationUtil.isValidName(name)) {
-                    throw new IllegalArgumentException("Invalid name! Only letters allowed.");
+                    errors.add("Name must contain only letters!");
                 }
                 
-                double pension = Double.parseDouble(pensionField.getText().trim());
-                if (!ValidationUtil.isValidPensionAmount(pension)) {
-                    throw new IllegalArgumentException("Pension amount must be positive!");
+                // Validate address (text only)
+                if (!address.matches("[a-zA-Z\\s,.-]+")) {
+                    errors.add("Address must contain only text!");
                 }
                 
-                // Create veteran
+                // Validate contact number (exactly 10 digits)
+                if (!contact.matches("\\d{10}")) {
+                    errors.add("Contact number must be exactly 10 digits!");
+                }
+                
+                // Validate date format
+                if (!ValidationUtil.isValidDate(dob)) {
+                    errors.add("Invalid date format! Use YYYY-MM-DD.");
+                }
+                
+                // 3. Display appropriate error message
+                if (errors.size() >= 2) {
+                    // Multiple errors: generic message
+                    JOptionPane.showMessageDialog(dialog, 
+                            "Your data is invalid, please re-enter!", 
+                            "Invalid Data", JOptionPane.ERROR_MESSAGE);
+                    return;
+                } else if (errors.size() == 1) {
+                    // Single error: specific message
+                    JOptionPane.showMessageDialog(dialog, 
+                            errors.get(0), 
+                            "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                // 4. All validations passed - create veteran
+                double pension = Double.parseDouble((String) pensionField.getSelectedItem());
+                String startYear = (String) startDateField.getSelectedItem();
+                String endYear = (String) endDateField.getSelectedItem();
+                LocalDate serviceStart = LocalDate.parse(startYear + "-01-01");
+                LocalDate serviceEnd = LocalDate.parse(endYear + "-12-31");
+                
                 Veteran veteran = new Veteran(
                         serviceNo,
                         name,
-                        rankField.getText().trim(),
-                        LocalDate.parse(dobField.getText().trim()),
-                        LocalDate.parse(startDateField.getText().trim()),
-                        LocalDate.parse(endDateField.getText().trim()),
+                        rank,
+                        LocalDate.parse(dob),
+                        serviceStart,
+                        serviceEnd,
                         (String) schemeCombo.getSelectedItem(),
                         pension,
-                        contactField.getText().trim(),
-                        addressField.getText().trim(),
-                        regimentField.getText().trim(),
+                        contact,
+                        address,
+                        (String) regimentField.getSelectedItem(),
                         "Retired"
                 );
                 
                 controller.addVeteran(veteran);
                 loadVeteransIntoTable();
+                dashboardView.refreshDashboard();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Veteran added successfully!", 
                         "Success", JOptionPane.INFORMATION_MESSAGE);
                 
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog, 
-                        "Invalid number format for pension amount!", 
-                        "Input Error", JOptionPane.ERROR_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, ex.getMessage(), 
+                JOptionPane.showMessageDialog(dialog, 
+                        "Error: " + ex.getMessage(), 
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -564,6 +678,7 @@ public class VeteranManagementPanel extends JPanel {
                 
                 controller.updateVeteran(veteran.getServiceNumber(), updatedVeteran);
                 loadVeteransIntoTable();
+                dashboardView.refreshDashboard();
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Veteran updated successfully!", 
                         "Success", JOptionPane.INFORMATION_MESSAGE);
